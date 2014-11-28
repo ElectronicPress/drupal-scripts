@@ -51,8 +51,8 @@ facl_files ()
   # Set files directory ACLs.
   if [ ! -f "$acl" ]
     then echo "Could not find files.acl.  Using defaults." && \
-         find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -Rbm g:web-drupal:rwX,d:g:web-drupal:rwX "$target"
-    else find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -RbM "$acl" "$target"
+         find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -Rbm g:web-drupal:rwX,d:g:web-drupal:rwX
+    else find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -RbM "$acl"
   fi
   echo "File directory acl's set."
 }
