@@ -29,7 +29,7 @@ mysql -uroot -p -e \
 mkdir -p "$APPROOT" && cd "$APPROOT"
 
 # Import the site archive.
-drush archive-restore "$ARCHIVE" --destination="$ARCHIVE"/docroot
+drush archive-restore "$ARCHIVE" --destination="$APPROOT"/docroot
 
 # Initialize git.
 git init
