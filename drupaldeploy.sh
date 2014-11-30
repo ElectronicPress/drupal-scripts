@@ -16,45 +16,40 @@ if [ ! -f "$ARCHIVE" ]; then
 fi
 
 # Get the root database passwd
-echo "Enter the sql root password"
-read DB_ROOT
+read -s -p "Enter the sql root password:" DB_ROOT
 
-echo "Enter the new database name."
-read DB_NAME
+# Check correct creds.
+until mysql -u root -p"$DB_ROOT"  -e ";" ; do
+  read -s -p "Can't connect, please retry:" DB_ROOT
+done
 
-# Check if the database exists.
-if [[ ! -z "`mysql -qfsBep -uroot -p "$DB_ROOT" "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='${DB_NAME}'" 2>&1`" ]]; then
+# Get the database name.
+read -p $'\nEnter the new database name:' DB_NAME
+
+# Check if DB exists.
+if [ "`mysql -uroot -p"$DB_ROOT" --skip-column-names -e "SHOW DATABASES LIKE '$DB_NAME'"`" == "$DB_NAME" ]; then
 
   # Warn user.
-  echo "Database $DB_NAME already exists.  Do you want to remove it?  Enter y to to continue.";
-
-  # Get ansser
-  read REMOVE_DB
+  read -p "Database $DB_NAME already exists.  Enter y to overwrite: " REMOVE_DB
 
   # Check that it is to be removed.
-  if [ ! "$REMOVE_DB" -eq "y" ]; then
-    echo "Database already exists."
+  if [ "$REMOVE_DB" != "y" ]; then
+    echo "Error: Database already exists."
     exit 1
   fi
-
-  # Remove the database.
-  mysql -uroot -p "$DB_ROOT" -e "DROP DATABASE $DB_NAME"
 fi
 
 # Get the database user.
-echo "Enter the new database user name"
-read DB_USER
+read -p $'\nEnter the new database user name: ' DB_USER
 
 # Get the git url.
-echo "Enter the git repository URL"
-read GIT_URL
+read -p $'\nEnter the git repository URL: ' GIT_URL
 
 # Get the approot.
-echo "Enter the new approot (NOT with docroot)"
-read APPROOT
+read -p $'\nEnter the new approot (NOT with docroot): ' APPROOT
 
 # Create the user, database, and grants.
-mysql -uroot -p -e \
+mysql -uroot -p"$DB_ROOT" -e \
   "CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '${DB_USER}_localhost'; \
    CREATE DATABASE $DB_NAME; \
    GRANT ALL ON $DB_NAME.* to '$DB_USER'@'localhost';"
@@ -77,11 +72,10 @@ FACL_SCRIPT=/var/www/scripts/drupalfacl.sh
 if [ -f "$FACL_SCRIPT" ]; then
 
   # Ask to run FACL.
-  echo "Do you want to drupalfacl.sh w $APPROOT? Enter y to continue."
-  read RUN_FACL
+  read -p $'\nEnter y to run drupalfacl.sh w on $APPROOT: ' RUN_FACL
 
   # They want to run
-  if [ "$RUN_FACL" -eq "y" ]; then
+  if [ "$RUN_FACL" == "y" ]; then
     eval "$FACL_SCRIPT w $APPROOT"
   fi;
 fi
