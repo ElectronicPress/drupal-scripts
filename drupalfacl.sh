@@ -1,67 +1,73 @@
 #!/bin/bash
-
-# Must be at least one argument
-if [ "$#" -lt 1 ]; then
-  echo "Usage: drupalfacl [w webroot|f files] [path]"
-  exit 1
-fi
-
+#
+# Must be root
+#
+[ "$(id -u)" != "0" ] && { printf "Please run as root."; exit 1 }
+#
+# Must be one argument
+#
+[ "$#" -ne 1 ] && { echo "Usage: drupalfacl [path]"; exit 1 }
+#
 # Set target to second argument, default to html folder.
-target=${2:-/var/www/html}
-
+#
+TARGET=${1:-/var/www/html}
+#
 # Ensure valid target directory.
-if [ ! -d "$target" ]; then
-  echo "The directory \`$target\` was not found"
-  exit 1
-fi
-
-# Set contexts.
+#
+[ ! -d "$TARGET" ] && { echo "The directory \`$TARGET\` does not exist."; exit 1 }
+#
+# Set SELinux contexts.
+#
 selinux_chcon ()
 {
-  ENFORCE=/selinux/enforce
-  if [ -f "$ENFORCE" ] &&  [ `cat "$ENFORCE"` == 1 ]; then
-    chcon -R system_u:object_r:httpd_sys_content_t:s0 "$target"
+  ENFORCE=/selinux/enforce &&
+    [ -f "$ENFORCE" ] &&
+    [ `cat "$ENFORCE"` == 1 ] &&
+    chcon -R system_u:object_r:httpd_sys_content_t:s0 "$TARGET" &&
     echo "Contexts set"
-  fi
 }
-
+#
 # Initialize the webroot acl.
+#
 facl_webroot ()
 {
   # Get acl file.
-  acl="`pwd`/webroot.acl"
+  ACL="`pwd`/webroot.acl"
 
   # Set global webroot ACL
-  if [ ! -f "$acl" ]
-    then echo "Could not find webroot.acl.  Using defaults." && \
-         setfacl -Rbm u::rwX,g::---,o::---,g:web-user:r-X,g:web-admin:rwX,m::rwx,d:u::rwX,d:g::---,d:o::---,d:g:web-user:r-X,d:g:web-admin:rwX,d:m::rwx "$target"
-    else setfacl -RbM "$acl" "$target"
-  fi
+  [ ! -f "$ACL" ] &&
+    echo "Could not find webroot.acl.  Using defaults." &&
+    setfacl -Rbm u::rwX,g::---,o::---,g:web-user:r-X,g:web-admin:rwX,m::rwx,d:u::rwX,d:g::---,d:o::---,d:g:web-user:r-X,d:g:web-admin:rwX,d:m::rwx "$TARGET" ||
+    setfacl -RbM "$ACL" "$TARGET"
 
   # Success.
-  echo "Directory \`$target\` initialized."
+  echo "Directory \`$TARGET\` initialized."
 }
-
+#
 # Sets the files directory acls.
+#
 facl_files ()
 {
   # Get acl file.
-  acl="`pwd`/files.acl"
+  ACL="`pwd`/files.acl"
 
   # Set files directory ACLs.
-  if [ ! -f "$acl" ]
-    then echo "Could not find files.acl.  Using defaults." && \
-         find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -Rbm g:web-drupal:rwX,d:g:web-drupal:rwX
-    else find "$target" -path "*sites/default/files" -print0 | xargs -0 setfacl -RbM "$acl"
-  fi
+  [ ! -f "$ACL" ] &&
+    echo "Could not find files.acl.  Using defaults." &&
+    find "$TARGET" -path "*sites/default/files" -print0 | xargs -0 setfacl -Rbm g:web-drupal:rwX,d:g:web-drupal:rwX ||
+    find "$TARGET" -path "*sites/default/files" -print0 | xargs -0 setfacl -RbM "$ACL"
+
+  # Success.
   echo "File directory acl's set."
 }
-
-# Switch argument.
-case "$1" in
-w) selinux_chcon; facl_webroot; facl_files;;
-f) selinux_chcon; facl_files;;
-*) echo "Usage: drupalfacl [w webroot|f files] [path]"; exit 1;;
-esac
-
+#
+# Prompts.
+#
+read -p "Set SELinux Contexts? [Y/n]: " SET_SELINUX_CHCON; [[ "$SET_SELINUX_CHCON" =~ (y|Y|) ]] && selinux_chcon
+read -p "Set ACLs on $TARGET? [Y/n]: "  SET_FACL_WEBROOT;  [[ "$SET_FACL_WEBROOT" =~ (y|Y|) ]]  && facl_webroot
+read -p "Set ACLS on sites/default/files? [Y/n]: " SET_FACL_FILES; [[ "$SET_FACL_WEBROOT" =~ (y|Y|) ]] && facl_files
+#
+# Done.
+#
+echo "Complete!"
 exit 0;
