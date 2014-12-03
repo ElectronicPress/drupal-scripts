@@ -2,19 +2,16 @@
 #
 # Must be root.
 #
-[ "$(id -u)" != "0" ] &&
-  { printf "Please run as root."; exit 1 }
+[ "$(id -u)" != "0" ] && { echo "Please run as root."; exit 1; }
 #
 # Must be one argument.
 #
-[ "$#" -ne 1 ] &&
-  { echo "Please enter the path to the drush archive-dump file"; exit 1 }
+[ "$#" -ne 1 ] && { echo "Usage: drupaldeploy [drush-archive-dump-file]"; exit 1; }
 #
 # Archive exists.
 #
-ARCHIVE=$1 &&
-  [ ! -f "$ARCHIVE" ] &&
-  { echo "The archive '$ARCHIVE' does not exist"; exit 1 }
+ARCHIVE=$1 && [ ! -f "$ARCHIVE" ] &&
+  { echo "The archive '$ARCHIVE' does not exist"; exit 1; }
 #
 # Valid archive.
 #
@@ -96,7 +93,7 @@ printf "Creating approot $APPROOT..." &&
 # Import the site archive.
 #
 printf "Restoring $ARCHIVE to $APPROOT..." &&
-  drush archive-restore "$ARCHIVE" --destination="$APPROOT"/docroot > /dev/null &&
+  drush archive-restore "$ARCHIVE" --destination="$APPROOT"/docroot &> /dev/null &&
   echo " done."
 #
 # Initialize git.
@@ -111,6 +108,7 @@ printf "Configuring git..." &&
 #
 [[ "$RUN_FACL" =~ (y|Y) ]] &&
   printf "Setting ACLs..." &&
+  cd - &&
   ./drupalfacl.sh "$APPROOT" > /dev/null &&
   echo " done."
 #
