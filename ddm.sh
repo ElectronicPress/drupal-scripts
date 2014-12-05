@@ -96,7 +96,7 @@ ddm_facl ()
   [ -d "$1" ] &&
   printf "Setting files directory ACLs... "
   find "$1" -path "*sites/default/files" -print0 | \
-  xargs -0 setfacl -Rbm "$FACL_HTTPD_DEFAULT" &&
+  xargs -0 setfacl -Rm "$FACL_HTTPD_DEFAULT" &&
   echo " done."
 }
 
@@ -399,38 +399,10 @@ ddm_iptables()
 # Must be root.
 [ "$(id -u)" != "0" ] && echo "Please run as root." && exit 1
 
-PS3='Select a task: '
-options=(
-  "1 Initial migration"
-  "Set file permissions (context & ACL)"
-)
-
-select opt in $options
-do
-    case $opt in
-        "1")
-            echo "you chose choice 1"
-            ;;
-        "Option 2")
-            echo "you chose choice 2"
-            ;;
-        "Option 3")
-            echo "you chose choice 3"
-            ;;
-        "Quit")
-            break
-            ;;
-        *) echo $opt
-        echo invalid option;;
-    esac
-done
-
 # Validate argument.
 [[ ! "$#" -eq 1 || ! "$1" =~ (m|p|h|i) ]] &&
   echo "Usage: ddm [(m)igrate|(p)ermissions|(h)ttpd VirtualHost|(i)ptables]" &&
   exit 1
-
-
 
 # Run selected functionality.
 case "$1" in
