@@ -158,16 +158,23 @@ ddm_ip_ai_https()
 #===============================================================================
 ddm_perms ()
 {
+
+  # Confirm run.
+  read -p "Run ACL and/or CHCON? [Y/n]: " RUN_PERMS
+  [[ ! "$RUN_PERMS" =~ (Y|y|) ]] && return 0
+
   # Get the item to set the permissions on.
   PERM_ITEM="$1"
   until [[ -f "$PERM_ITEM" || -d "$PERM_ITEM" ]]
   do read -p "`echo $'\n'`Enter an existing file or directory: " PERM_ITEM; done
 
-  # Set the contexts.
-  ddm_chcon "$PERM_ITEM"
+  # Set the contexts if requested.
+  read -p "Set contexts on $PERM_ITEM? [Y/n]: " SET_CONTEXTS
+  [[ "$SET_CONTEXTS" =~ (Y|y|) ]]  && ddm_chcon "$PERM_ITEM"
 
-  # Set the File ACL's
-  ddm_facl "$PERM_ITEM"
+  # Set the file ACLs if requested.
+  read -p "Set file ACLs on $PERM_ITEM? [Y/n]: " SET_ACLS
+  [[ "$SET_ACLS" =~ (Y|y|) ]]  && ddm_facl "$PERM_ITEM"
 }
 
 #===  FUNCTION  ================================================================
@@ -238,8 +245,10 @@ function ddm_httpd_vhost ()
   # Close file.
   VHOST_CONTENT="$VHOST_CONTENT"$'\n'"</VirtualHost>"
 
-  # Target file
-  VHOST_FILE="/etc/httpd/conf.d/$WEIGHT-$APP_NAME.conf"
+  # Get location for VHOST file.
+  VHOST_FILE_DEFAULT="/etc/httpd/conf.d/$WEIGHT-$APP_NAME.conf"
+  read -p "`echo $'\n'`Conf location [$VHOST_FILE_DEFAULT]: " VHOST_FILE
+  VHOST_FILE="${VHOST_FILE:=$VHOST_FILE_DEFAULT}"
 
   # Confirm write.
   echo "$VHOST_CONTENT"$'\n'
@@ -287,7 +296,7 @@ ddm_import_archive ()
 
   # Check if the database exists already and confirm removal if so.
   DB_EXISTS=`mysql -uroot -p"$DB_ROOT" -N -e "SHOW DATABASES LIKE '$DB_NAME'"`
-  echo "$DB_EXISTS"
+
   [ "$DB_EXISTS" == "$DB_NAME" ] &&
   read -p "Database $DB_NAME already exists, overwrite? [y/N]: " REMOVE_DB &&
   [[ ! "$REMOVE_DB"  =~ (y|Y) ]] &&
@@ -295,13 +304,16 @@ ddm_import_archive ()
   exit 1;
 
   # Check if the app root already exists and confirm removal if so.
-  [ -d "$APP_ROOT" ] &&
-  read -p " $APP_ROOT already exists, overwrite? [y/N]: " REMOVE_APP_ROOT
+  if [ -d "$APP_ROOT" ]; then
+    read -p " $APP_ROOT already exists, overwrite? [y/N]: " REMOVE_APP_ROOT
 
-  # User said don't remove app route.
-  [[ ! "$REMOVE_APP_ROOT" =~ (y|Y) ]] &&
-  echo "Error: directory already exists." &&
-  exit 1;
+    # User said don't remove app route.
+    [[ ! "$REMOVE_APP_ROOT" =~ (y|Y) ]] &&
+    echo "Error: directory already exists." &&
+    exit 1;
+  fi;
+
+
 
   # Create the create the database and set user priviliges.
   printf "Creating database $DB_NAME..."
