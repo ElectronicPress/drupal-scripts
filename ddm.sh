@@ -96,7 +96,7 @@ ddm_facl ()
   [ -d "$1" ] &&
   printf "Setting files directory ACLs... "
   find "$1" -path "*sites/default/files" -print0 | \
-  xargs -0 setfacl -Rm "$FACL_HTTPD_DEFAULT" &&
+  xargs -0 -r setfacl -Rm "$FACL_HTTPD_DEFAULT" &&
   echo " done."
 }
 
